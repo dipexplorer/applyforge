@@ -1,3 +1,5 @@
 node_modules/
 .env
 applications.db*
+.agent/
+.agents/

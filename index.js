@@ -4,6 +4,7 @@ const { chromium } = require('playwright');
 const { GoogleGenAI } = require('@google/genai');
 const fs = require('fs').promises;
 const path = require('path');
+const { scrapeJobs } = require('./scraper');
 
 async function main() {
     try {
@@ -188,14 +189,31 @@ Question: ${questionText}
         }
 
         // --- Example Usage ---
-        const targetUrl = process.argv[2];
+        const command = process.argv[2];
+        const arg1 = process.argv[3];
+        const arg2 = process.argv[4];
         
-        if (targetUrl) {
-            await applyToGreenhouse(targetUrl);
+        if (command === 'scrape' && arg1) {
+            const keyword = arg2 || '';
+            const links = await scrapeJobs(arg1, keyword);
+            if (links.length > 0) {
+                console.log(`\nStarting automation pipeline for ${links.length} jobs...`);
+                for (const link of links) {
+                    await applyToGreenhouse(link);
+                    console.log("Moving to next job in 5 seconds...");
+                    await new Promise(r => setTimeout(r, 5000));
+                }
+            } else {
+                console.log("No matching jobs found to apply for.");
+            }
+        } else if (command && command.startsWith('http')) {
+            await applyToGreenhouse(command);
         } else {
             console.log("\nSetup completed successfully. The application is ready.");
-            console.log("To test the automation, run the script with a Greenhouse URL as an argument:");
-            console.log("Example: node index.js https://boards.greenhouse.io/company/jobs/123456");
+            console.log("To apply to a specific job:");
+            console.log("  node index.js https://boards.greenhouse.io/company/jobs/123456");
+            console.log("To scrape a board and apply to matching jobs:");
+            console.log("  node index.js scrape https://boards.greenhouse.io/company \"keyword\"");
         }
 
     } catch (error) {
