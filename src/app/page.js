@@ -81,21 +81,16 @@ export default function Dashboard() {
     };
 
     const quickApply = async (url, idx) => {
+        // Open the job page in a new tab — Chrome extension handles AI filling
+        window.open(url, '_blank', 'noopener');
+
+        // Record the visit in DB (fire-and-forget)
         setApplyingId(idx);
-        try {
-            const res = await fetch("/api/apply", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ url }),
-            });
-            const data = await res.json();
-            if (data.error) alert("Error: " + data.error);
-            fetchHistory();
-        } catch (err) {
-            alert("Error: " + err.message);
-        } finally {
-            setApplyingId(null);
-        }
+        fetch('/api/apply', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url }),
+        }).then(() => fetchHistory()).catch(() => {}).finally(() => setApplyingId(null));
     };
 
     const updateStatus = async (id, status) => {
