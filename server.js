@@ -8,7 +8,7 @@ const { scrapeJobs } = require('./scraper');
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+
 
 // Initialize DB connection
 const db = new Database(path.join(__dirname, 'applications.db'));

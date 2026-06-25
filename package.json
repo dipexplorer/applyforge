@@ -4,6 +4,7 @@
   "description": "AutoApplier is a semi-automated pipeline built to help Software Engineering Interns apply to roles faster. Instead of spending hours filling out repetitive ATS (Applicant Tracking System) forms, AutoApplier uses browser automation and generative AI to parse job postings, fill forms with your profile data, and even draft custom answers to unique application questions.",
   "main": "index.js",
   "scripts": {
+    "start": "concurrently \"node server.js\" \"cd frontend && npm run dev -- -p 3001\"",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -14,6 +15,7 @@
     "axios": "^1.18.1",
     "better-sqlite3": "^12.11.1",
     "cheerio": "^1.2.0",
+    "concurrently": "^9.2.3",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
