@@ -1,4 +1,5 @@
-import { applyToJob } from '@/lib/engine';
+import { spawn } from 'child_process';
+import path from 'path';
 
 export async function POST(req) {
     try {
@@ -11,10 +12,18 @@ export async function POST(req) {
             });
         }
         
-        // Run in background without blocking the response
-        applyToJob(url).catch(err => console.error("Background apply error:", err));
+        const workerPath = path.join(process.cwd(), 'src', 'lib', 'worker.js');
         
-        return new Response(JSON.stringify({ message: "Application started. Check your terminal and Playwright window.", url }), {
+        // Spawn a detached Node process to handle Playwright
+        const child = spawn('node', [workerPath, url], {
+            detached: true,
+            stdio: 'ignore'
+        });
+        
+        // Unref so the parent (Next.js) doesn't wait for the child
+        child.unref();
+        
+        return new Response(JSON.stringify({ message: "AI Copilot successfully launched in a new window!", url }), {
             status: 200,
             headers: { 'Content-Type': 'application/json' }
         });

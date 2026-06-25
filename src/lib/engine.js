@@ -5,49 +5,8 @@ const { GoogleGenAI } = require('@google/genai');
 const fs = require('fs').promises;
 const path = require('path');
 
-async function handleCustomQuestions(page, profileData, ai) {
-    console.log("\nChecking for custom questions in textareas...");
-    const textareas = page.locator('textarea');
-    const textareaCount = await textareas.count();
-    
-    if (textareaCount > 0) {
-        const profileDump = JSON.stringify(profileData, null, 2);
-        
-        for (let i = 0; i < textareaCount; i++) {
-            const ta = textareas.nth(i);
-            if (await ta.isVisible()) {
-                let questionText = "Unknown Question";
-                
-                const id = await ta.getAttribute('id');
-                if (id) {
-                    const label = page.locator(`label[for="${id}"]`);
-                    if (await label.count() > 0) {
-                        questionText = await label.innerText();
-                    }
-                }
-                
-                if (questionText === "Unknown Question") {
-                    const parentText = await ta.evaluate(el => el.parentElement?.innerText || '');
-                    if (parentText) questionText = parentText.split('\n')[0];
-                }
-                
-                try {
-                    const prompt = `You are an applicant. Based on the following resume data: ${profileDump}\nAnswer the application question in a professional tone. Keep it under 50 words. Do not lie.\nQuestion: ${questionText}`;
-                    
-                    const response = await ai.models.generateContent({
-                        model: 'gemini-1.5-flash',
-                        contents: prompt,
-                    });
-                    
-                    const answer = response.text;
-                    await ta.fill(answer);
-                } catch (aiError) {
-                    console.error(`AI Error: ${aiError.message}`);
-                }
-            }
-        }
-    }
-}
+// Keep references to prevent GC
+global.activeBrowsers = global.activeBrowsers || [];
 
 async function applyToGreenhouse(page, profileData) {
     console.log("Mapping Greenhouse fields...");
@@ -106,7 +65,6 @@ async function applyToLever(page, profileData) {
         await phoneLoc.fill(profileData.personal.phone);
     }
     
-    // Some Lever forms have an org field
     const orgLoc = page.locator('input[name="org"]');
     if (await orgLoc.count() > 0 && profileData.education && profileData.education.length > 0) {
         await orgLoc.fill(profileData.education[0].university);
@@ -140,8 +98,7 @@ async function applyToLever(page, profileData) {
 }
 
 /**
- * Main entry point for applying to a job.
- * @param {string} url - The job posting URL
+ * Main entry point for applying to a job in Interactive Copilot mode.
  */
 async function applyToJob(url) {
     try {
@@ -163,6 +120,7 @@ async function applyToJob(url) {
             throw new Error(`Failed to read profile.json: ${err.message}`);
         }
 
+        const profileDump = JSON.stringify(profileData, null, 2);
         const isGreenhouse = url.includes('boards.greenhouse.io');
         const isLever = url.includes('jobs.lever.co');
 
@@ -170,49 +128,136 @@ async function applyToJob(url) {
             throw new Error("Unsupported URL. Only Greenhouse and Lever are supported.");
         }
 
-        console.log("Launching Playwright (Chromium, non-headless)...");
-        const browser = await chromium.launch({ headless: false });
-        const context = await browser.newContext();
-
-        console.log(`\nStarting application process for: ${url}`);
-        const page = await context.newPage();
+        console.log("Launching Playwright (Chromium, Interactive Mode)...");
+        const browser = await chromium.launch({ headless: false, args: ['--start-maximized'] });
+        global.activeBrowsers.push(browser);
         
-        try {
-            console.log("Navigating to URL...");
-            await page.goto(url, { waitUntil: 'domcontentloaded' });
-            
-            let atsName = "Unknown";
+        const context = await browser.newContext({ viewport: null });
+        const page = await context.newPage();
 
-            if (isGreenhouse) {
-                atsName = "Greenhouse";
-                await applyToGreenhouse(page, profileData);
-            } else if (isLever) {
-                atsName = "Lever";
-                // Lever often puts the apply form behind an "Apply for this job" button click on the main page.
-                // We attempt to find the form directly, or click the button.
-                const applyBtn = page.locator('a.postings-btn').filter({ hasText: 'Apply' }).first();
-                if (await applyBtn.count() > 0 && await applyBtn.isVisible()) {
-                    await applyBtn.click();
-                    await page.waitForLoadState('domcontentloaded');
-                }
-                await applyToLever(page, profileData);
+        // Expose AI functionality to the browser
+        await page.exposeFunction('generateAIAnswer', async (question) => {
+            console.log(`[Copilot] AI requested for: "${question}"`);
+            try {
+                const prompt = `You are a human applicant filling out a job application. Based on your following resume data:\n\n${profileDump}\n\nAnswer the application question in a conversational, professional, and authentic human tone. Do not sound robotic. Write a natural response. Keep it under 100 words. Do not hallucinate or lie. Only answer the question asked.\nQuestion: ${question}`;
+                
+                const response = await ai.models.generateContent({
+                    model: 'gemini-1.5-flash',
+                    contents: prompt,
+                });
+                return response.text;
+            } catch (err) {
+                console.error(`AI Generation Error: ${err.message}`);
+                return "AI Error: Could not generate answer.";
             }
+        });
 
-            await handleCustomQuestions(page, profileData, ai);
+        // Inject UI script
+        await page.addInitScript(() => {
+            document.addEventListener('DOMContentLoaded', () => {
+                const style = document.createElement('style');
+                style.textContent = `
+                    .ai-magic-btn {
+                        background: linear-gradient(135deg, #2563eb, #7c3aed);
+                        color: white;
+                        border: none;
+                        border-radius: 6px;
+                        padding: 6px 12px;
+                        font-size: 13px;
+                        cursor: pointer;
+                        margin-top: 6px;
+                        display: inline-block;
+                        font-weight: bold;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                        transition: all 0.2s ease;
+                        font-family: system-ui, -apple-system, sans-serif;
+                    }
+                    .ai-magic-btn:hover {
+                        opacity: 0.9;
+                        transform: translateY(-1px);
+                        box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+                    }
+                `;
+                document.head.appendChild(style);
 
-            // Insert into Database
-            const stmt = db.prepare('INSERT INTO applications (company, role, url, date_applied, status, ats_platform) VALUES (?, ?, ?, ?, ?, ?)');
-            stmt.run("Unknown Company", "Unknown Role", url, new Date().toISOString(), "Pending", atsName);
+                const addButtons = () => {
+                    // Only target textareas and specific text inputs for custom questions
+                    const fields = document.querySelectorAll('textarea, input[type="text"]:not([id="first_name"]):not([id="last_name"]):not([id="email"]):not([id="phone"]):not([name="name"]):not([name="email"]):not([name="phone"]):not([name="org"])');
+                    
+                    fields.forEach(field => {
+                        // Skip if already added
+                        if (field.nextElementSibling?.classList.contains('ai-magic-btn')) return;
+                        
+                        const btn = document.createElement('button');
+                        btn.className = 'ai-magic-btn';
+                        btn.innerHTML = '🪄 Auto-Generate';
+                        btn.type = 'button'; // Prevent form submission
+                        
+                        btn.onclick = async (e) => {
+                            e.preventDefault();
+                            btn.innerHTML = '⏳ Generating...';
+                            try {
+                                // Attempt to find the label for this field
+                                let label = '';
+                                const parent = field.closest('div');
+                                if (parent) {
+                                    const labelEl = parent.querySelector('label') || parent.querySelector('.application-label');
+                                    if (labelEl) label = labelEl.innerText;
+                                }
+                                if (!label) label = field.name || field.id || field.placeholder;
+                                
+                                const answer = await window.generateAIAnswer(label);
+                                field.value = answer;
+                                
+                                // Dispatch events so React/Vue/custom frameworks register the change
+                                field.dispatchEvent(new Event('input', { bubbles: true }));
+                                field.dispatchEvent(new Event('change', { bubbles: true }));
 
-            console.log("PAUSING SCRIPT FOR MANUAL REVIEW.");
-            await page.pause();
+                                btn.innerHTML = '✨ Done';
+                                setTimeout(() => { btn.innerHTML = '🪄 Auto-Generate'; }, 2500);
+                            } catch (err) {
+                                btn.innerHTML = '❌ Error';
+                            }
+                        };
+                        
+                        field.parentNode.insertBefore(btn, field.nextSibling);
+                    });
+                };
+                
+                addButtons();
+                const observer = new MutationObserver(addButtons);
+                observer.observe(document.body, { childList: true, subtree: true });
+            });
+        });
 
-        } catch (error) {
-            console.error(`Error during apply execution: ${error.message}`);
-            throw error;
+        console.log("Navigating to URL...");
+        await page.goto(url, { waitUntil: 'domcontentloaded' });
+        
+        let atsName = "Unknown";
+
+        if (isGreenhouse) {
+            atsName = "Greenhouse";
+            await applyToGreenhouse(page, profileData);
+        } else if (isLever) {
+            atsName = "Lever";
+            const applyBtn = page.locator('a.postings-btn').filter({ hasText: 'Apply' }).first();
+            if (await applyBtn.count() > 0 && await applyBtn.isVisible()) {
+                await applyBtn.click();
+                await page.waitForLoadState('domcontentloaded');
+            }
+            await applyToLever(page, profileData);
         }
+
+        // Insert into Database
+        const stmt = db.prepare('INSERT INTO applications (company, role, url, date_applied, status, ats_platform) VALUES (?, ?, ?, ?, ?, ?)');
+        stmt.run("Copilot Mode", "Interactive", url, new Date().toISOString(), "Pending", atsName);
+
+        console.log("Application started in interactive mode. Window is left open for the user.");
+        // We do NOT await browser.close() or page.pause() because we want the API request to finish 
+        // while leaving the browser open for the user to interact with.
+
     } catch (error) {
-        console.error("Fatal error:", error.message);
+        console.error(`Error during apply execution: ${error.message}`);
         throw error;
     }
 }
