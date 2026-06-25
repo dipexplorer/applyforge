@@ -1,5 +1,12 @@
-import { spawn } from 'child_process';
+import Database from 'better-sqlite3';
 import path from 'path';
+
+function getDb() {
+    const dbPath = path.join(process.cwd(), 'data', 'applications.db');
+    const db = new Database(dbPath);
+    db.pragma('journal_mode = WAL');
+    return db;
+}
 
 export async function POST(req) {
     try {
@@ -12,18 +19,14 @@ export async function POST(req) {
             });
         }
         
-        const workerPath = path.join(process.cwd(), 'src', 'lib', 'worker.js');
+        // Save the click to history
+        const db = getDb();
+        db.prepare(`
+            INSERT INTO applications (url, apply_url, status, source) 
+            VALUES (?, ?, 'Pending', 'AutoApplier')
+        `).run(url, url);
         
-        // Spawn a detached Node process to handle Playwright
-        const child = spawn('node', [workerPath, url], {
-            detached: true,
-            stdio: 'ignore'
-        });
-        
-        // Unref so the parent (Next.js) doesn't wait for the child
-        child.unref();
-        
-        return new Response(JSON.stringify({ message: "AI Copilot successfully launched in a new window!", url }), {
+        return new Response(JSON.stringify({ message: "Recorded in history" }), {
             status: 200,
             headers: { 'Content-Type': 'application/json' }
         });

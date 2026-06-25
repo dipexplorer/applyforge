@@ -1,24 +1,19 @@
 {
     "manifest_version": 3,
     "name": "AutoApplier Copilot",
-    "version": "1.0.0",
-    "description": "AI-powered job application assistant. Focus any field on Greenhouse or Lever to get AI-generated answers from your profile.",
+    "version": "1.0.1",
+    "description": "AI-powered job application assistant. Focus any field to get AI-generated answers from your profile.",
     "permissions": [
         "activeTab",
         "storage"
     ],
     "host_permissions": [
-        "https://boards.greenhouse.io/*",
-        "https://job-boards.greenhouse.io/*",
-        "https://jobs.lever.co/*",
-        "http://localhost:3000/*"
+        "<all_urls>"
     ],
     "content_scripts": [
         {
             "matches": [
-                "https://boards.greenhouse.io/*",
-                "https://job-boards.greenhouse.io/*",
-                "https://jobs.lever.co/*"
+                "<all_urls>"
             ],
             "js": ["content.js"],
             "css": ["content.css"],
