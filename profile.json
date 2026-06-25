@@ -1,0 +1,97 @@
+{
+  "personal": {
+    "first_name": "Dipjyoti",
+    "last_name": "Das",
+    "email": "contact@dipjyoti.dev",
+    "phone": "+91-XXXXXXXXXX",
+    "location": "Guwahati, Assam, India",
+    "portfolio": "https://portfolio.dipjyoti.dev",
+    "linkedin": "https://linkedin.com/in/dipjyoti-das",
+    "github": "https://github.com/dipexplorer",
+    "twitter": ""
+  },
+  "education": [
+    {
+      "institution": "Gauhati University",
+      "degree": "Bachelor of Technology - BTech, Computer Science",
+      "start_date": "2022",
+      "end_date": "2026",
+      "gpa": "TBD"
+    }
+  ],
+  "experience": [
+    {
+      "company": "SahiDawa",
+      "role": "Creator & Lead Developer",
+      "start_date": "January 2025",
+      "end_date": "Present",
+      "description": "Leading the development of an open-source platform that helps citizens verify medicines and report suspicious drugs. Architecting the system for low-bandwidth environments with multi-lingual access across India."
+    },
+    {
+      "company": "GirlScript Summer of Code",
+      "role": "Project Admin - LegalHub",
+      "start_date": "May 2025",
+      "end_date": "August 2025",
+      "description": "Led code reviews for 33+ contributors across 80+ PRs on LegalHub. Architected MVC backend; shipped AI legal Q&A and real-time WebSocket chat. Set up CI/CD via GitHub Actions with automated Jest test runs."
+    },
+    {
+      "company": "Northeast Frontier Railway",
+      "role": "Signal & Telecom Field Trainee",
+      "start_date": "June 2025",
+      "end_date": "July 2025",
+      "description": "Completed intensive field training within the Signal & Telecom Department. Gained hands-on insights into railway networking architecture, telecommunications infrastructure, and signal engineering."
+    },
+    {
+      "company": "InnoByte Services",
+      "role": "Full Stack Developer Intern",
+      "start_date": "October 2024",
+      "end_date": "December 2024",
+      "description": "Architected the backend for a scalable e-commerce application using Node.js, Express, and MongoDB. Built robust RESTful APIs for product management, secure JWT authentication, and order processing."
+    },
+    {
+      "company": "Chegg India",
+      "role": "Computer Science Subject Matter Expert",
+      "start_date": "April 2023",
+      "end_date": "October 2024",
+      "description": "Evaluated and authored solutions for 500+ complex technical problems across DSA, System Design, and DBMS. Maintained a 4.8/5 quality rating over 18 months."
+    },
+    {
+      "company": "Trans Virtual Private Limited",
+      "role": "Computer Networking Intern",
+      "start_date": "January 2024",
+      "end_date": "January 2024",
+      "description": "Gained hands-on experience setting up and maintaining network systems, including enterprise routers and switches. Navigated device CLIs and utilized tools like PuTTY."
+    }
+  ],
+  "projects": [
+    {
+      "name": "LegalHub",
+      "description": "AI-Powered Legal Query Resolution Platform using Mistral AI, Express, and Socket.io."
+    },
+    {
+      "name": "LearnSight",
+      "description": "Dynamic Cognitive-Score Adaptive Learning Platform built with Next.js, TypeScript, and Firebase."
+    },
+    {
+      "name": "Acadence",
+      "description": "Supabase-backed Attendance System & Predictive Simulator built with Next.js and Tailwind."
+    },
+    {
+      "name": "VideTube",
+      "description": "Scalable Video Streaming Backend using Node.js, Redis, and Mongo Aggregation pipelines."
+    }
+  ],
+  "skills": [
+    "JavaScript", "TypeScript", "Python", "SQL",
+    "React.js", "Next.js", "Tailwind CSS",
+    "Node.js", "Express.js", "WebSockets", "REST APIs",
+    "MongoDB", "PostgreSQL", "Supabase", "Firebase", "Redis",
+    "Git", "Docker", "CI/CD"
+  ],
+  "preferences": {
+    "preferred_roles": ["Software Engineering Intern", "Full Stack Intern", "Backend Intern", "SDE Intern"],
+    "sponsorship_needed": false,
+    "willing_to_relocate": true,
+    "locations": ["Remote", "Bengaluru", "Hyderabad", "Pune", "Gurgaon"]
+  }
+}
