@@ -5,11 +5,15 @@ import { useState, useEffect } from "react";
 export default function Dashboard() {
   const [history, setHistory] = useState([]);
   const [applyUrl, setApplyUrl] = useState("");
-  const [scrapeUrl, setScrapeUrl] = useState("");
-  const [scrapeKeyword, setScrapeKeyword] = useState("");
-  const [scrapeResults, setScrapeResults] = useState(null);
+  
+  // Discovery State
+  const [jobType, setJobType] = useState("Internship");
+  const [field, setField] = useState("Software Engineering");
+  const [remoteOnly, setRemoteOnly] = useState(false);
+  const [discoveryResults, setDiscoveryResults] = useState(null);
+  
   const [loading, setLoading] = useState(false);
-  const [scrapeLoading, setScrapeLoading] = useState(false);
+  const [discoverLoading, setDiscoverLoading] = useState(false);
 
   useEffect(() => {
     fetchHistory();
@@ -26,7 +30,7 @@ export default function Dashboard() {
   };
 
   const handleApply = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (!applyUrl) return;
     setLoading(true);
     try {
@@ -42,32 +46,26 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
       setApplyUrl("");
+      fetchHistory();
     }
   };
 
-  const handleScrape = async (e) => {
+  const handleDiscover = async (e) => {
     e.preventDefault();
-    if (!scrapeUrl) return;
-    
-    let targetUrl = scrapeUrl;
-    if (!targetUrl.startsWith('http')) {
-        targetUrl = `https://boards.greenhouse.io/${targetUrl}`;
-    }
-
-    setScrapeLoading(true);
-    setScrapeResults(null);
+    setDiscoverLoading(true);
+    setDiscoveryResults(null);
     try {
-      const res = await fetch("/api/scrape", {
+      const res = await fetch("/api/discovery", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ boardUrl: targetUrl, keyword: scrapeKeyword }),
+        body: JSON.stringify({ jobType, field, remoteOnly }),
       });
       const data = await res.json();
-      setScrapeResults(data);
+      setDiscoveryResults(data);
     } catch (err) {
-      setScrapeResults({ error: err.message });
+      setDiscoveryResults({ error: err.message });
     } finally {
-      setScrapeLoading(false);
+      setDiscoverLoading(false);
     }
   };
 
@@ -79,6 +77,7 @@ export default function Dashboard() {
         body: JSON.stringify({ url }),
       });
       alert(`Application launched for ${url}`);
+      fetchHistory();
     } catch (err) {
       alert("Error: " + err.message);
     }
@@ -90,91 +89,148 @@ export default function Dashboard() {
         
         <header className="border-b border-gray-200 pb-6">
           <h1 className="text-4xl font-extrabold tracking-tight text-gray-900">AutoApplier</h1>
-          <p className="mt-2 text-lg text-gray-600">Clean, Fast, Automated Application Dashboard</p>
+          <p className="mt-2 text-lg text-gray-600">Global Job Discovery & Auto-Apply Engine</p>
         </header>
 
         <div className="grid md:grid-cols-2 gap-8">
           
-          <section className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-            <h2 className="text-xl font-bold mb-4">Direct Apply</h2>
-            <form onSubmit={handleApply} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Greenhouse Job URL</label>
-                <input
-                  type="text"
-                  value={applyUrl}
-                  onChange={(e) => setApplyUrl(e.target.value)}
-                  placeholder="https://boards.greenhouse.io/..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                  required
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg transition-colors disabled:opacity-50"
-              >
-                {loading ? "Launching Playwright..." : "Apply Now"}
-              </button>
-            </form>
-          </section>
-
-          <section className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-            <h2 className="text-xl font-bold mb-4">Scrape Job Board</h2>
-            <form onSubmit={handleScrape} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+          <section className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
+            <div>
+              <h2 className="text-xl font-bold mb-4">Manual Direct Apply</h2>
+              <p className="text-sm text-gray-500 mb-4">Already have a Greenhouse or Lever link? Paste it here to auto-apply immediately.</p>
+              <form onSubmit={handleApply} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Target Board</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">ATS Job URL</label>
                   <input
                     type="text"
-                    value={scrapeUrl}
-                    onChange={(e) => setScrapeUrl(e.target.value)}
-                    placeholder="e.g. figma"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    value={applyUrl}
+                    onChange={(e) => setApplyUrl(e.target.value)}
+                    placeholder="https://boards.greenhouse.io/..."
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
                     required
                   />
                 </div>
+              </form>
+            </div>
+            <button
+              onClick={handleApply}
+              disabled={loading || !applyUrl}
+              className="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg transition-colors disabled:opacity-50"
+            >
+              {loading ? "Launching Playwright..." : "Apply Now"}
+            </button>
+          </section>
+
+          <section className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <h2 className="text-xl font-bold mb-4">Discover Jobs</h2>
+            <form onSubmit={handleDiscover} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Keyword</label>
-                  <input
-                    type="text"
-                    value={scrapeKeyword}
-                    onChange={(e) => setScrapeKeyword(e.target.value)}
-                    placeholder="e.g. Intern"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Job Type</label>
+                  <select
+                    value={jobType}
+                    onChange={(e) => setJobType(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black outline-none bg-white"
+                  >
+                    <option value="Internship">Internship</option>
+                    <option value="Full-Time">Full-Time / New Grad</option>
+                  </select>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Field</label>
+                  <select
+                    value={field}
+                    onChange={(e) => setField(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black outline-none bg-white"
+                  >
+                    <option value="Any">Any Field</option>
+                    <option value="Software Engineer">Software Engineering</option>
+                    <option value="Backend">Backend</option>
+                    <option value="Full Stack">Full Stack</option>
+                    <option value="Frontend">Frontend</option>
+                    <option value="Data">Data Science / ML</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex items-center mt-2">
+                <input
+                  type="checkbox"
+                  id="remote"
+                  checked={remoteOnly}
+                  onChange={(e) => setRemoteOnly(e.target.checked)}
+                  className="w-4 h-4 text-black border-gray-300 rounded focus:ring-black"
+                />
+                <label htmlFor="remote" className="ml-2 text-sm text-gray-700">Remote Opportunities Only</label>
               </div>
               <button
                 type="submit"
-                disabled={scrapeLoading}
+                disabled={discoverLoading}
                 className="w-full bg-gray-900 hover:bg-black text-white font-medium py-2.5 rounded-lg transition-colors disabled:opacity-50"
               >
-                {scrapeLoading ? "Scraping..." : "Find Jobs"}
+                {discoverLoading ? "Searching Globe..." : "Discover Jobs"}
               </button>
             </form>
-
-            {scrapeResults && (
-              <div className="mt-4 border-t border-gray-100 pt-4">
-                {scrapeResults.error ? (
-                  <p className="text-red-500 text-sm">{scrapeResults.error}</p>
-                ) : scrapeResults.links && scrapeResults.links.length > 0 ? (
-                  <ul className="space-y-2 max-h-40 overflow-y-auto pr-2">
-                    {scrapeResults.links.map((link, idx) => (
-                      <li key={idx} className="flex justify-between items-center text-sm p-2 bg-gray-50 rounded border border-gray-200">
-                        <a href={link} target="_blank" rel="noreferrer" className="text-blue-600 truncate mr-2 hover:underline">{link}</a>
-                        <button onClick={() => quickApply(link)} className="px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors">Apply</button>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-gray-500 text-sm">No jobs matched your criteria.</p>
-                )}
-              </div>
-            )}
           </section>
         </div>
 
+        {/* Discovery Results Section */}
+        {discoveryResults && (
+          <section className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <h2 className="text-xl font-bold mb-4 flex items-center justify-between">
+              Discovered Opportunities
+              <span className="text-sm font-normal text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                {discoveryResults.jobs?.length || 0} Found
+              </span>
+            </h2>
+            {discoveryResults.error ? (
+              <p className="text-red-500">{discoveryResults.error}</p>
+            ) : discoveryResults.jobs && discoveryResults.jobs.length > 0 ? (
+              <div className="overflow-x-auto max-h-96 overflow-y-auto border border-gray-200 rounded-lg">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-gray-50 text-gray-600 sticky top-0 border-b border-gray-200">
+                    <tr>
+                      <th className="px-4 py-3 font-semibold">Company</th>
+                      <th className="px-4 py-3 font-semibold">Role</th>
+                      <th className="px-4 py-3 font-semibold">Location</th>
+                      <th className="px-4 py-3 font-semibold text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {discoveryResults.jobs.map((job, idx) => (
+                      <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-4 py-3 font-medium text-gray-900">{job.company}</td>
+                        <td className="px-4 py-3 text-gray-700">{job.role}</td>
+                        <td className="px-4 py-3 text-gray-500">{job.location}</td>
+                        <td className="px-4 py-3 text-right space-x-2">
+                          <a 
+                            href={job.link} 
+                            target="_blank" 
+                            rel="noreferrer" 
+                            className="inline-block px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                          >
+                            View
+                          </a>
+                          <button 
+                            onClick={() => quickApply(job.link)} 
+                            className="inline-block px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors shadow-sm"
+                          >
+                            Auto-Apply
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="py-8 text-center text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+                No jobs matched your current filters. Try broadening your search.
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* History Section */}
         <section className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold">Application History</h2>
