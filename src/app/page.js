@@ -17,7 +17,7 @@ export default function Dashboard() {
 
   const fetchHistory = async () => {
     try {
-      const res = await fetch("http://localhost:3000/api/applications");
+      const res = await fetch("/api/applications");
       const data = await res.json();
       setHistory(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -30,7 +30,7 @@ export default function Dashboard() {
     if (!applyUrl) return;
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:3000/api/apply", {
+      const res = await fetch("/api/apply", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: applyUrl }),
@@ -57,7 +57,7 @@ export default function Dashboard() {
     setScrapeLoading(true);
     setScrapeResults(null);
     try {
-      const res = await fetch("http://localhost:3000/api/scrape", {
+      const res = await fetch("/api/scrape", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ boardUrl: targetUrl, keyword: scrapeKeyword }),
@@ -73,7 +73,7 @@ export default function Dashboard() {
 
   const quickApply = async (url) => {
     try {
-      await fetch("http://localhost:3000/api/apply", {
+      await fetch("/api/apply", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url }),
