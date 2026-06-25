@@ -1,138 +1,74 @@
-/* AutoApplier Copilot — injected styles */
+/* AutoApplier Copilot — inline styles */
 
-#aa-tooltip {
-    position: fixed;
-    z-index: 2147483647;
+.aa-field-wrapper {
+    position: relative;
+    /* Ensure it behaves correctly in flex/grid layouts */
+    display: block; 
+}
+
+/* The inline AI button */
+.aa-inline-btn {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
     background: linear-gradient(135deg, #1e40af, #6d28d9);
     color: white;
-    border-radius: 10px;
-    padding: 10px 14px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.25), 0 2px 8px rgba(109,40,217,0.4);
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    font-size: 13px;
-    min-width: 220px;
-    max-width: 320px;
-    pointer-events: all;
-    animation: aa-fadeIn 0.18s ease;
-    border: 1px solid rgba(255,255,255,0.15);
-    backdrop-filter: blur(8px);
-}
-
-@keyframes aa-fadeIn {
-    from { opacity: 0; transform: translateY(-6px) scale(0.96); }
-    to   { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-#aa-tooltip .aa-header {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-bottom: 8px;
-    font-weight: 700;
-    font-size: 12px;
-    letter-spacing: 0.03em;
-    color: rgba(255,255,255,0.85);
-    text-transform: uppercase;
-}
-
-#aa-tooltip .aa-header .aa-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #4ade80;
-    animation: aa-pulse 1.5s infinite;
-}
-
-@keyframes aa-pulse {
-    0%, 100% { opacity: 1; }
-    50%       { opacity: 0.4; }
-}
-
-#aa-tooltip .aa-question {
-    font-size: 12px;
-    color: rgba(255,255,255,0.7);
-    margin-bottom: 10px;
-    line-height: 1.4;
-    max-height: 48px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-}
-
-#aa-tooltip .aa-btn {
-    display: block;
-    width: 100%;
-    padding: 8px 12px;
     border: none;
-    border-radius: 7px;
-    font-size: 13px;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 11px;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.15s;
-    letter-spacing: 0.01em;
-    text-align: center;
-    box-sizing: border-box;
+    box-shadow: 0 2px 8px rgba(109,40,217,0.3);
+    z-index: 10;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    transition: all 0.2s ease;
+    opacity: 0.8;
 }
 
-#aa-tooltip .aa-btn-generate {
-    background: white;
-    color: #1e40af;
-    margin-bottom: 6px;
-}
-
-#aa-tooltip .aa-btn-generate:hover {
-    background: #eff6ff;
-    transform: translateY(-1px);
-}
-
-#aa-tooltip .aa-btn-autofill {
-    background: rgba(255,255,255,0.12);
-    color: white;
-    border: 1px solid rgba(255,255,255,0.2);
-}
-
-#aa-tooltip .aa-btn-autofill:hover {
-    background: rgba(255,255,255,0.2);
-}
-
-#aa-tooltip .aa-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+/* Specific adjustment for textareas so the button stays near the top right */
+textarea + .aa-inline-btn {
+    top: 12px;
     transform: none;
 }
 
-#aa-tooltip .aa-spinner {
+.aa-inline-btn:hover {
+    opacity: 1;
+    box-shadow: 0 4px 12px rgba(109,40,217,0.5);
+    transform: translateY(-50%) scale(1.05);
+}
+
+textarea + .aa-inline-btn:hover {
+    transform: scale(1.05);
+}
+
+.aa-inline-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: translateY(-50%);
+}
+
+textarea + .aa-inline-btn:disabled {
+    transform: none;
+}
+
+/* Spinner icon */
+.aa-spinner {
     display: inline-block;
-    width: 12px;
-    height: 12px;
+    width: 10px;
+    height: 10px;
     border: 2px solid currentColor;
     border-top-color: transparent;
     border-radius: 50%;
     animation: aa-spin 0.7s linear infinite;
-    margin-right: 6px;
+    margin-right: 4px;
     vertical-align: middle;
 }
 
 @keyframes aa-spin {
     to { transform: rotate(360deg); }
 }
-
-#aa-tooltip .aa-close {
-    position: absolute;
-    top: 8px;
-    right: 10px;
-    background: none;
-    border: none;
-    color: rgba(255,255,255,0.5);
-    cursor: pointer;
-    font-size: 16px;
-    line-height: 1;
-    padding: 0;
-}
-
-#aa-tooltip .aa-close:hover { color: white; }
 
 /* Autofill highlight on completed fields */
 .aa-filled {
@@ -158,6 +94,11 @@
     animation: aa-fadeIn 0.2s ease;
     max-width: 340px;
     line-height: 1.5;
+}
+
+@keyframes aa-fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
 }
 
 #aa-toast.aa-toast-success { border-left: 4px solid #4ade80; }

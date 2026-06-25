@@ -1,13 +1,10 @@
 /**
  * AutoApplier Copilot — Content Script
  * Injected into Greenhouse & Lever job pages.
- * Shows floating AI tooltip when user clicks any input field.
+ * Shows an inline AI button next to every input field. No automatic filling.
  */
 
 const API_BASE = 'http://localhost:3000';
-
-let activeField = null;
-let tooltip = null;
 let profile = null;
 
 // ─── Load profile from local server ────────────────────────────────────────
@@ -36,143 +33,74 @@ function showToast(msg, type = 'info', duration = 3000) {
 
 // ─── Get label for a field ──────────────────────────────────────────────────
 function getFieldLabel(field) {
-    // 1. aria-label
     if (field.getAttribute('aria-label')) return field.getAttribute('aria-label');
-
-    // 2. Associated <label>
     const id = field.id;
     if (id) {
         const label = document.querySelector(`label[for="${id}"]`);
         if (label) return label.innerText.trim();
     }
-
-    // 3. Closest container label
     const container = field.closest('li, div.field, div.form-group, section, .application-question');
     if (container) {
         const lbl = container.querySelector('label, .label, .application-label, legend, h4, h3, p strong');
         if (lbl) return lbl.innerText.trim();
     }
-
-    // 4. placeholder or name
     return field.placeholder || field.name || field.id || 'Describe yourself';
 }
 
-// ─── Check if field should trigger copilot ─────────────────────────────────
-function isTargetField(field) {
-    const tag = field.tagName.toLowerCase();
-    const type = (field.type || '').toLowerCase();
-
-    // Always trigger on textareas
-    if (tag === 'textarea') return true;
-
-    // Text inputs — skip basic identity fields
-    if (tag === 'input' && type === 'text') {
-        const skipIds = ['first_name', 'last_name', 'email', 'phone', 'name'];
-        const skipNames = ['name', 'email', 'phone', 'org'];
-        if (skipIds.includes(field.id)) return false;
-        if (skipNames.includes(field.name)) return false;
-        return true;
-    }
-
-    return false;
-}
-
-// ─── Remove tooltip ─────────────────────────────────────────────────────────
-function removeTooltip() {
-    if (tooltip) { tooltip.remove(); tooltip = null; }
-}
-
-// ─── Position tooltip near field ────────────────────────────────────────────
-function positionTooltip(field) {
-    const rect = field.getBoundingClientRect();
-    const scrollY = window.scrollY;
-    const scrollX = window.scrollX;
-
-    let top = rect.bottom + scrollY + 8;
-    let left = rect.left + scrollX;
-
-    // Keep inside viewport
-    const maxLeft = window.innerWidth - 340;
-    if (left > maxLeft) left = maxLeft;
-    if (left < 8) left = 8;
-
-    return { top, left };
-}
-
-// ─── Show tooltip ───────────────────────────────────────────────────────────
-function showTooltip(field) {
-    removeTooltip();
-    activeField = field;
-
-    const question = getFieldLabel(field);
-    const { top, left } = positionTooltip(field);
-
-    tooltip = document.createElement('div');
-    tooltip.id = 'aa-tooltip';
-    tooltip.style.top = `${top}px`;
-    tooltip.style.left = `${left}px`;
-    tooltip.style.position = 'absolute';
-
-    tooltip.innerHTML = `
-        <button class="aa-close" title="Close">×</button>
-        <div class="aa-header">
-            <span class="aa-dot"></span>
-            AutoApplier Copilot
-        </div>
-        <div class="aa-question">${question.length > 120 ? question.slice(0, 120) + '…' : question}</div>
-        <button class="aa-btn aa-btn-generate" id="aa-generate-btn">
-            🪄 Generate AI Answer
-        </button>
-        <button class="aa-btn aa-btn-autofill" id="aa-autofill-btn">
-            ⚡ Auto-fill All Fields
-        </button>
-    `;
-
-    document.body.appendChild(tooltip);
-
-    // Generate answer
-    tooltip.querySelector('#aa-generate-btn').addEventListener('click', async () => {
-        await generateAnswer(field, question);
-    });
-
-    // Auto-fill all basic fields
-    tooltip.querySelector('#aa-autofill-btn').addEventListener('click', async () => {
-        await autoFillAll();
-    });
-
-    // Close
-    tooltip.querySelector('.aa-close').addEventListener('click', removeTooltip);
-
-    // Close on outside click
-    setTimeout(() => {
-        document.addEventListener('click', (e) => {
-            if (tooltip && !tooltip.contains(e.target) && e.target !== field) {
-                removeTooltip();
-            }
-        }, { once: true });
-    }, 100);
-}
-
-// ─── Generate AI answer for a specific field ────────────────────────────────
-async function generateAnswer(field, question) {
-    const btn = tooltip?.querySelector('#aa-generate-btn');
-    if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = '<span class="aa-spinner"></span> Generating...';
-    }
+// ─── Generate AI answer / autofill specific field ─────────────────────────
+async function handleFieldFill(field, btn, label) {
+    btn.disabled = true;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<span class="aa-spinner"></span>...';
 
     try {
-        const res = await fetch(`${API_BASE}/api/generate`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ question }),
-        });
+        // Load profile if not loaded
+        if (!profile) {
+            profile = await loadProfile();
+        }
 
-        if (!res.ok) throw new Error(`Server error ${res.status}`);
-        const data = await res.json();
-        const answer = data.answer;
+        // We check if it's a basic field that can be mapped directly first
+        const p = profile?.personal || {};
+        const basicMappings = {
+            'first_name': p.first_name,
+            'last_name': p.last_name,
+            'email': p.email,
+            'phone': p.phone,
+            'name': `${p.first_name || ''} ${p.last_name || ''}`.trim(),
+            'org': profile?.education?.[0]?.university,
+            'linkedin': p.linkedin,
+            'github': p.github,
+            'portfolio': p.website,
+            'website': p.website,
+            'twitter': p.twitter
+        };
 
-        // Fill the field
+        let directMatch = null;
+        for (const [key, val] of Object.entries(basicMappings)) {
+            const id = (field.id || '').toLowerCase();
+            const name = (field.name || '').toLowerCase();
+            if ((id.includes(key) || name.includes(key)) && val) {
+                directMatch = val;
+                break;
+            }
+        }
+
+        let answer = directMatch;
+
+        // If it's not a basic field, we ask Gemini
+        if (!answer) {
+            const res = await fetch(`${API_BASE}/api/generate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ question: label }),
+            });
+
+            if (!res.ok) throw new Error(`Server error ${res.status}`);
+            const data = await res.json();
+            answer = data.answer;
+        }
+
+        // Set value correctly
         const nativeInputSetter = Object.getOwnPropertyDescriptor(
             window.HTMLTextAreaElement.prototype, 'value'
         ) || Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value');
@@ -187,134 +115,75 @@ async function generateAnswer(field, question) {
         field.dispatchEvent(new Event('change', { bubbles: true }));
         field.classList.add('aa-filled');
 
-        removeTooltip();
-        showToast('✨ AI answer generated!', 'success');
+        btn.innerHTML = '✨ Done';
+        setTimeout(() => {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }, 2000);
 
     } catch (err) {
-        if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = '🪄 Generate AI Answer';
-        }
+        btn.disabled = false;
+        btn.innerHTML = '❌ Error';
         showToast(`❌ Error: ${err.message}. Is localhost:3000 running?`, 'error', 5000);
+        setTimeout(() => { btn.innerHTML = originalText; }, 3000);
     }
 }
 
-// ─── Auto-fill all basic identity fields ────────────────────────────────────
-async function autoFillAll() {
-    const btn = tooltip?.querySelector('#aa-autofill-btn');
-    if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = '<span class="aa-spinner"></span> Filling...';
-    }
+// ─── Inject buttons next to all input fields ──────────────────────────────
+function injectButtons() {
+    // Target standard text inputs, email, tel, url, and textareas
+    const fields = document.querySelectorAll('textarea, input[type="text"], input[type="email"], input[type="tel"], input[type="url"], input:not([type])');
+    
+    fields.forEach((field) => {
+        // Skip hidden fields or fields that already have the button
+        if (field.type === 'hidden' || field.style.display === 'none') return;
+        
+        // Find if button already exists right after the field
+        const wrapperExists = field.parentElement.classList.contains('aa-field-wrapper');
+        if (wrapperExists) return;
 
-    if (!profile) profile = await loadProfile();
+        // Create a wrapper for the field to position the button cleanly
+        const wrapper = document.createElement('div');
+        wrapper.className = 'aa-field-wrapper';
+        wrapper.style.position = 'relative';
+        wrapper.style.display = field.style.display === 'block' ? 'block' : 'inline-block';
+        wrapper.style.width = '100%';
 
-    if (!profile?.personal) {
-        showToast('❌ Could not load profile. Is localhost:3000 running?', 'error', 5000);
-        if (btn) { btn.disabled = false; btn.innerHTML = '⚡ Auto-fill All Fields'; }
-        return;
-    }
+        // Move field into wrapper
+        field.parentNode.insertBefore(wrapper, field);
+        wrapper.appendChild(field);
 
-    const p = profile.personal;
-    const fullName = `${p.first_name || ''} ${p.last_name || ''}`.trim();
+        // Create the AI button
+        const btn = document.createElement('button');
+        btn.className = 'aa-inline-btn';
+        btn.innerHTML = '🪄 AI Fill';
+        btn.type = 'button';
+        btn.title = "Fill this field with AI";
 
-    const fieldMap = [
-        // Greenhouse
-        { sel: 'input#first_name',   val: p.first_name },
-        { sel: 'input#last_name',    val: p.last_name },
-        { sel: 'input#email',        val: p.email },
-        { sel: 'input#phone',        val: p.phone },
-        // Lever
-        { sel: 'input[name="name"]',  val: fullName },
-        { sel: 'input[name="email"]', val: p.email },
-        { sel: 'input[name="phone"]', val: p.phone },
-        { sel: 'input[name="org"]',   val: profile.education?.[0]?.university },
-        // URLs
-        { sel: 'input[name*="linkedin" i], input[autocomplete*="linkedin" i]', val: p.linkedin },
-        { sel: 'input[name*="github" i]',    val: p.github },
-        { sel: 'input[name*="portfolio" i], input[name*="website" i]', val: p.website },
-        { sel: 'input[name*="twitter" i]',   val: p.twitter },
-    ];
+        const label = getFieldLabel(field);
+        
+        btn.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleFieldFill(field, btn, label);
+        };
 
-    let filled = 0;
-    for (const { sel, val } of fieldMap) {
-        if (!val) continue;
-        try {
-            const el = document.querySelector(sel);
-            if (el && !el.value) {
-                el.value = val;
-                el.dispatchEvent(new Event('input',  { bubbles: true }));
-                el.dispatchEvent(new Event('change', { bubbles: true }));
-                el.classList.add('aa-filled');
-                filled++;
-            }
-        } catch { /* skip */ }
-    }
-
-    removeTooltip();
-    showToast(`⚡ Filled ${filled} field${filled !== 1 ? 's' : ''} automatically!`, 'success');
-}
-
-// ─── Attach focus listeners ─────────────────────────────────────────────────
-function attachListeners() {
-    document.addEventListener('focusin', (e) => {
-        const field = e.target;
-        if (!isTargetField(field)) return;
-        showTooltip(field);
+        wrapper.appendChild(btn);
     });
-
-    // Reposition on scroll
-    window.addEventListener('scroll', () => {
-        if (tooltip && activeField) {
-            const { top, left } = positionTooltip(activeField);
-            tooltip.style.top = `${top}px`;
-            tooltip.style.left = `${left}px`;
-        }
-    });
-}
-
-// ─── Auto-fill on page load ─────────────────────────────────────────────────
-async function autoFillOnLoad() {
-    await new Promise(r => setTimeout(r, 1500)); // wait for React/dynamic forms
-    profile = await loadProfile();
-    if (!profile) return;
-
-    const p = profile.personal;
-    const fullName = `${p.first_name || ''} ${p.last_name || ''}`.trim();
-
-    const fieldMap = [
-        { sel: 'input#first_name',   val: p.first_name },
-        { sel: 'input#last_name',    val: p.last_name },
-        { sel: 'input#email',        val: p.email },
-        { sel: 'input#phone',        val: p.phone },
-        { sel: 'input[name="name"]',  val: fullName },
-        { sel: 'input[name="email"]', val: p.email },
-        { sel: 'input[name="phone"]', val: p.phone },
-        { sel: 'input[name="org"]',   val: profile.education?.[0]?.university },
-        { sel: 'input[name*="linkedin" i]', val: p.linkedin },
-        { sel: 'input[name*="github" i]',   val: p.github },
-    ];
-
-    let filled = 0;
-    for (const { sel, val } of fieldMap) {
-        if (!val) continue;
-        try {
-            const el = document.querySelector(sel);
-            if (el && !el.value) {
-                el.value = val;
-                el.dispatchEvent(new Event('input',  { bubbles: true }));
-                el.dispatchEvent(new Event('change', { bubbles: true }));
-                el.classList.add('aa-filled');
-                filled++;
-            }
-        } catch { /* skip */ }
-    }
-
-    if (filled > 0) {
-        showToast(`⚡ Auto-filled ${filled} field${filled !== 1 ? 's' : ''} from your profile!`, 'success', 4000);
-    }
 }
 
 // ─── Init ───────────────────────────────────────────────────────────────────
-attachListeners();
-autoFillOnLoad();
+// Run once DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', injectButtons);
+} else {
+    injectButtons();
+}
+
+// Observe mutations for dynamically loaded forms (e.g. Lever/Greenhouse JS)
+const observer = new MutationObserver(() => {
+    // debounce slightly to avoid performance hits
+    clearTimeout(window.aaInjectTimeout);
+    window.aaInjectTimeout = setTimeout(injectButtons, 200);
+});
+observer.observe(document.body, { childList: true, subtree: true });
