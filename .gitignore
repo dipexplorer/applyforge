@@ -42,3 +42,7 @@ data/applications.db-shm
 data/applications.db-wal
 data/profile.json
 data/resume.pdf
+
+# Agent directories
+.agent/
+.agents/
