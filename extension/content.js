@@ -139,7 +139,7 @@ function injectButtons() {
         if (field.type === 'hidden' || field.style.display === 'none') return;
         
         // Find if button already exists right after the field
-        const wrapperExists = field.parentElement.classList.contains('aa-field-wrapper');
+        const wrapperExists = field.parentElement?.classList?.contains('aa-field-wrapper');
         if (wrapperExists) return;
 
         // Create a wrapper for the field to position the button cleanly
@@ -172,22 +172,28 @@ function injectButtons() {
     });
 }
 
-// ─── Init ───────────────────────────────────────────────────────────────────
 // DO NOT run on the local dashboard itself (avoids React hydration errors)
 if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-    // Run once DOM is ready
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', injectButtons);
-    } else {
+    
+    function initApplier() {
         injectButtons();
+        
+        // Observe mutations for dynamically loaded forms (e.g. Lever/Greenhouse JS)
+        if (document.body) {
+            const observer = new MutationObserver(() => {
+                // debounce slightly to avoid performance hits
+                clearTimeout(window.aaInjectTimeout);
+                window.aaInjectTimeout = setTimeout(injectButtons, 200);
+            });
+            observer.observe(document.body, { childList: true, subtree: true });
+        }
     }
 
-    // Observe mutations for dynamically loaded forms (e.g. Lever/Greenhouse JS)
-    const observer = new MutationObserver(() => {
-        // debounce slightly to avoid performance hits
-        clearTimeout(window.aaInjectTimeout);
-        window.aaInjectTimeout = setTimeout(injectButtons, 200);
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
+    // Run once DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initApplier);
+    } else {
+        initApplier();
+    }
 }
 
