@@ -1,4 +1,4 @@
-import { applyToGreenhouse } from '@/lib/engine';
+import { applyToJob } from '@/lib/engine';
 
 export async function POST(req) {
     try {
@@ -12,7 +12,7 @@ export async function POST(req) {
         }
         
         // Run in background without blocking the response
-        applyToGreenhouse(url).catch(err => console.error("Background apply error:", err));
+        applyToJob(url).catch(err => console.error("Background apply error:", err));
         
         return new Response(JSON.stringify({ message: "Application started. Check your terminal and Playwright window.", url }), {
             status: 200,
