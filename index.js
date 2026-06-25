@@ -1,6 +1,7 @@
 require('dotenv').config();
 const Database = require('better-sqlite3');
 const { chromium } = require('playwright');
+const { GoogleGenAI } = require('@google/genai');
 const fs = require('fs').promises;
 const path = require('path');
 
@@ -8,6 +9,9 @@ async function main() {
     try {
         console.log("Loading environment variables...");
         // Environment variables are loaded via dotenv.config() above.
+        
+        console.log("Initializing Gemini AI Client...");
+        const ai = new GoogleGenAI({});
 
         console.log("Initializing SQLite database...");
         const dbPath = path.join(__dirname, 'applications.db');
@@ -105,6 +109,64 @@ async function main() {
                     }
                 } catch (e) {
                     console.error("  - Error: resume.pdf not found in the directory. Please ensure it exists.");
+                }
+
+                console.log("\nChecking for custom questions in textareas...");
+                const textareas = page.locator('textarea');
+                const textareaCount = await textareas.count();
+                
+                if (textareaCount > 0) {
+                    console.log(`Found ${textareaCount} textareas. Attempting to generate answers...`);
+                    const profileDump = JSON.stringify(profileData, null, 2);
+                    
+                    for (let i = 0; i < textareaCount; i++) {
+                        const ta = textareas.nth(i);
+                        if (await ta.isVisible()) {
+                            let questionText = "Unknown Question";
+                            
+                            const id = await ta.getAttribute('id');
+                            if (id) {
+                                const label = page.locator(`label[for="${id}"]`);
+                                if (await label.count() > 0) {
+                                    questionText = await label.innerText();
+                                }
+                            }
+                            
+                            if (questionText === "Unknown Question") {
+                                const parentText = await ta.evaluate(el => el.parentElement?.innerText || '');
+                                if (parentText) questionText = parentText.split('\\n')[0];
+                            }
+                            
+                            console.log(`  - Question: "${questionText.substring(0, 50)}..."`);
+                            
+                            try {
+                                const prompt = `
+You are an applicant. 
+Based on the following resume data: 
+${profileDump}
+
+Answer the following application question in a professional, concise tone.
+Keep the answer under 50 words. Do not lie or invent experience outside of the resume.
+
+Question: ${questionText}
+                                `;
+                                
+                                console.log("    -> Calling Gemini API...");
+                                const response = await ai.models.generateContent({
+                                    model: 'gemini-1.5-flash',
+                                    contents: prompt,
+                                });
+                                
+                                const answer = response.text;
+                                await ta.fill(answer);
+                                console.log(`    -> Answer filled: "${answer.substring(0, 50)}..."`);
+                            } catch (aiError) {
+                                console.error(`    -> Error generating/filling answer for this question: ${aiError.message}`);
+                            }
+                        }
+                    }
+                } else {
+                    console.log("No textareas found.");
                 }
 
                 console.log("\nAll possible fields mapped and filled.");

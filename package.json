@@ -1,0 +1,12 @@
+{
+  "name": "autoapplier",
+  "version": "1.0.0",
+  "description": "AutoApplier is a semi-automated pipeline built to help Software Engineering Interns apply to roles faster. Instead of spending hours filling out repetitive ATS (Applicant Tracking System) forms, AutoApplier uses browser automation and generative AI to parse job postings, fill forms with your profile data, and even draft custom answers to unique application questions.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
