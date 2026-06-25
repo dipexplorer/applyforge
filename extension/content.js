@@ -173,17 +173,21 @@ function injectButtons() {
 }
 
 // ─── Init ───────────────────────────────────────────────────────────────────
-// Run once DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', injectButtons);
-} else {
-    injectButtons();
+// DO NOT run on the local dashboard itself (avoids React hydration errors)
+if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    // Run once DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', injectButtons);
+    } else {
+        injectButtons();
+    }
+
+    // Observe mutations for dynamically loaded forms (e.g. Lever/Greenhouse JS)
+    const observer = new MutationObserver(() => {
+        // debounce slightly to avoid performance hits
+        clearTimeout(window.aaInjectTimeout);
+        window.aaInjectTimeout = setTimeout(injectButtons, 200);
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
 }
 
-// Observe mutations for dynamically loaded forms (e.g. Lever/Greenhouse JS)
-const observer = new MutationObserver(() => {
-    // debounce slightly to avoid performance hits
-    clearTimeout(window.aaInjectTimeout);
-    window.aaInjectTimeout = setTimeout(injectButtons, 200);
-});
-observer.observe(document.body, { childList: true, subtree: true });
