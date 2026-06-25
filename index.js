@@ -188,11 +188,15 @@ Question: ${questionText}
         }
 
         // --- Example Usage ---
-        // Uncomment the line below and add a valid Greenhouse URL to test the script
-        // await applyToGreenhouse('https://boards.greenhouse.io/company/jobs/123456');
-
-        console.log("\nSetup completed successfully. The application is ready.");
-        console.log("Note: The browser will remain open. You can uncomment the 'applyToGreenhouse' call in the script to test.");
+        const targetUrl = process.argv[2];
+        
+        if (targetUrl) {
+            await applyToGreenhouse(targetUrl);
+        } else {
+            console.log("\nSetup completed successfully. The application is ready.");
+            console.log("To test the automation, run the script with a Greenhouse URL as an argument:");
+            console.log("Example: node index.js https://boards.greenhouse.io/company/jobs/123456");
+        }
 
     } catch (error) {
         console.error("\nFatal error encountered during main execution:", error.message);
