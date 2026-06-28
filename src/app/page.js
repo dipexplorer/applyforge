@@ -230,7 +230,7 @@ export default function Dashboard() {
                                     <button type="submit" disabled={discoverLoading}
                                         className="px-6 py-2.5 bg-gray-900 hover:bg-black text-white font-semibold rounded-lg text-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2">
                                         {discoverLoading ? (
-                                            <><span className="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span> Searching 25 Sources...</>
+                                            <><span className="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span> Searching 12 Sources...</>
                                         ) : "🔍 Discover Jobs Now"}
                                     </button>
                                     {discoveryResults?.total > 0 && (
