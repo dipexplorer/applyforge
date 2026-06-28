@@ -3,12 +3,40 @@
 import { useState, useEffect } from "react";
 
 const SOURCE_COLORS = {
-    Remotive: "bg-green-100 text-green-700",
-    RemoteOK: "bg-blue-100 text-blue-700",
-    Jobicy: "bg-purple-100 text-purple-700",
-    SimplifyJobs: "bg-orange-100 text-orange-700",
-    TheMuse: "bg-pink-100 text-pink-700",
+    // Remote-first APIs
+    "Remotive":          "bg-green-100 text-green-700",
+    "RemoteOK":          "bg-emerald-100 text-emerald-700",
+    "Jobicy":            "bg-teal-100 text-teal-700",
+    "WFH.io":            "bg-cyan-100 text-cyan-700",
+    "Arbeitnow":         "bg-sky-100 text-sky-700",
+    "Himalayas":         "bg-indigo-100 text-indigo-700",
+    "Startup.jobs":      "bg-violet-100 text-violet-700",
+    // Major aggregators
+    "LinkedIn":          "bg-blue-100 text-blue-700",
+    "Indeed":            "bg-blue-200 text-blue-800",
+    "Glassdoor":         "bg-green-200 text-green-800",
+    "Adzuna":            "bg-orange-100 text-orange-700",
+    "JSearch":           "bg-amber-100 text-amber-700",
+    "Dice":              "bg-yellow-100 text-yellow-700",
+    "Built In":          "bg-lime-100 text-lime-700",
+    // Curated / niche
+    "The Muse":          "bg-pink-100 text-pink-700",
+    "Otta":              "bg-rose-100 text-rose-700",
+    "Wellfound":         "bg-fuchsia-100 text-fuchsia-700",
+    "Y Combinator":      "bg-orange-200 text-orange-800",
+    "Coroflot":          "bg-purple-100 text-purple-700",
+    // ATS Direct
+    "SimplifyJobs":      "bg-slate-100 text-slate-700",
+    "PittCSC":           "bg-gray-100 text-gray-700",
+    // India
+    "Internshala":       "bg-red-100 text-red-700",
+    "Naukri":            "bg-red-200 text-red-800",
 };
+function sourceColor(name) {
+    // Also handle prefixed sources like "Greenhouse/airbnb"
+    const base = name.split('/')[0].trim();
+    return SOURCE_COLORS[base] || SOURCE_COLORS[name] || "bg-gray-100 text-gray-600";
+}
 
 export default function Dashboard() {
     const [history, setHistory] = useState([]);
@@ -202,12 +230,12 @@ export default function Dashboard() {
                                     <button type="submit" disabled={discoverLoading}
                                         className="px-6 py-2.5 bg-gray-900 hover:bg-black text-white font-semibold rounded-lg text-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2">
                                         {discoverLoading ? (
-                                            <><span className="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span> Searching 6 Sources...</>
+                                            <><span className="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span> Searching 25 Sources...</>
                                         ) : "🔍 Discover Jobs Now"}
                                     </button>
                                     {discoveryResults?.total > 0 && (
                                         <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1.5 rounded-full font-medium">
-                                            {discoveryResults.total} jobs found across the internet
+                                            {discoveryResults.total} jobs · {discoveryResults.sourcesQueried ?? 25} sources queried
                                         </span>
                                     )}
                                 </div>
@@ -240,9 +268,17 @@ export default function Dashboard() {
                                         Discovered Jobs
                                     </h2>
                                     <div className="flex gap-2 flex-wrap">
-                                        {Object.entries(SOURCE_COLORS).map(([src, cls]) => (
-                                            <span key={src} className={`text-xs px-2 py-0.5 rounded-full font-medium ${cls}`}>{src}</span>
-                                        ))}
+                                        {discoveryResults?.sourceCounts
+                                            ? Object.entries(discoveryResults.sourceCounts)
+                                                .filter(([, count]) => count > 0)
+                                                .sort(([, a], [, b]) => b - a)
+                                                .map(([src, count]) => (
+                                                    <span key={src} title={`${count} jobs`} className={`text-xs px-2 py-0.5 rounded-full font-medium ${sourceColor(src)}`}>
+                                                        {src.split('/')[0]} <span className="opacity-60">({count})</span>
+                                                    </span>
+                                                ))
+                                            : null
+                                        }
                                     </div>
                                 </div>
 
@@ -265,8 +301,8 @@ export default function Dashboard() {
                                                 {discoveryResults.jobs.map((job, idx) => (
                                                     <tr key={idx} className="hover:bg-gray-50 transition-colors">
                                                         <td className="px-4 py-3">
-                                                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${SOURCE_COLORS[job.source] || "bg-gray-100 text-gray-600"}`}>
-                                                                {job.source}
+                                                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${sourceColor(job.source)}`}>
+                                                                {job.source.split('/')[0]}
                                                             </span>
                                                         </td>
                                                         <td className="px-4 py-3 font-medium text-gray-900 max-w-[140px] truncate">{job.company}</td>
