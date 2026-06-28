@@ -220,7 +220,7 @@ function fieldToCategory(field) {
 // https://remotive.com — fully public, no auth, JSON
 async function fetchRemotive({ field }) {
     const cat = fieldToCategory(field);
-    const res = await fetch(`https://remotive.com/api/remote-jobs?category=${cat}&limit=100`);
+    const res = await fetch(`https://remotive.com/api/remote-jobs?category=${cat}&limit=100`, { signal: AbortSignal.timeout(8000) });
     if (!res.ok) throw new Error(`Remotive HTTP ${res.status}`);
     const data = await res.json();
     return (data.jobs || []).map(j => jobShape({
@@ -237,7 +237,7 @@ async function fetchRemotive({ field }) {
 async function fetchRemoteOK({ field }) {
     const tagMap = { 'Software Engineering': 'software', 'Backend': 'backend', 'Full Stack': 'full-stack', 'Frontend': 'front-end', 'Data/ML': 'machine-learning', 'DevOps': 'devops' };
     const tag = tagMap[field] || 'software';
-    const res = await fetch(`https://remoteok.com/api?tag=${tag}`, { headers: { 'User-Agent': UA } });
+    const res = await fetch(`https://remoteok.com/api?tag=${tag}`, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(8000) });
     if (!res.ok) throw new Error(`RemoteOK HTTP ${res.status}`);
     const data = await res.json();
     return data.filter(j => j.id && j.position).map(j => jobShape({
@@ -254,7 +254,7 @@ async function fetchRemoteOK({ field }) {
 async function fetchJobicy({ field }) {
     const industryMap = { 'Software Engineering': 'engineering', 'Backend': 'engineering', 'Full Stack': 'engineering', 'Frontend': 'design', 'Data/ML': 'data-science', 'DevOps': 'sysadmin' };
     const industry = industryMap[field] || 'engineering';
-    const res = await fetch(`https://jobicy.com/api/v2/remote-jobs?count=50&industry=${industry}`);
+    const res = await fetch(`https://jobicy.com/api/v2/remote-jobs?count=50&industry=${industry}`, { signal: AbortSignal.timeout(8000) });
     if (!res.ok) throw new Error(`Jobicy HTTP ${res.status}`);
     const data = await res.json();
     return (data.jobs || []).map(j => jobShape({
@@ -271,7 +271,7 @@ async function fetchJobicy({ field }) {
 async function fetchMuse({ field }) {
     const catMap = { 'Software Engineering': 'Software Engineer', 'Backend': 'Software Engineer', 'Full Stack': 'Software Engineer', 'Frontend': 'Software Engineer', 'Data/ML': 'Data Science', 'DevOps': 'DevOps' };
     const cat = encodeURIComponent(catMap[field] || 'Software Engineer');
-    const res = await fetch(`https://www.themuse.com/api/public/jobs?category=${cat}&page=0&descending=true`);
+    const res = await fetch(`https://www.themuse.com/api/public/jobs?category=${cat}&page=0&descending=true`, { signal: AbortSignal.timeout(8000) });
     if (!res.ok) throw new Error(`Muse HTTP ${res.status}`);
     const data = await res.json();
     return (data.results || []).map(j => jobShape({
@@ -289,7 +289,7 @@ async function fetchMuse({ field }) {
 async function fetchHimalayas({ field }) {
     const catMap = { 'Software Engineering': 'engineering', 'Backend': 'engineering', 'Full Stack': 'engineering', 'Frontend': 'engineering', 'Data/ML': 'data-science', 'DevOps': 'engineering' };
     const dept = catMap[field] || 'engineering';
-    const res = await fetch(`https://himalayas.app/jobs/api?department=${dept}&limit=100`, { headers: { 'User-Agent': UA } });
+    const res = await fetch(`https://himalayas.app/jobs/api?department=${dept}&limit=100`, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(8000) });
     if (!res.ok) throw new Error(`Himalayas HTTP ${res.status}`);
     const data = await res.json();
     return (data.jobs || []).map(j => jobShape({
@@ -307,7 +307,7 @@ async function fetchHimalayas({ field }) {
 // https://arbeitnow.com — Europe + worldwide, real public API
 async function fetchArbeitnow({ field }) {
     const keywords = fieldKeywords(field);
-    const res = await fetch('https://www.arbeitnow.com/api/job-board-api?page=1', { headers: { 'User-Agent': UA } });
+    const res = await fetch('https://www.arbeitnow.com/api/job-board-api?page=1', { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(8000) });
     if (!res.ok) throw new Error(`Arbeitnow HTTP ${res.status}`);
     const data = await res.json();
     return (data.data || [])
@@ -400,7 +400,7 @@ async function fetchSimplify({ jobType }) {
     const results = [];
     await Promise.allSettled(repos.map(async ({ url, type }) => {
         try {
-            const res = await fetch(url);
+            const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
             if (!res.ok) return;
             const $ = load(await res.text());
             $('tbody tr').each((_, el) => {
@@ -469,7 +469,7 @@ async function fetchAdzuna({ field, jobType }) {
     const apiKey = process.env.ADZUNA_API_KEY || '';
     if (!appId || !apiKey) return [];
     const what = encodeURIComponent(`${field === 'Any' ? 'software engineer' : field}${jobType === 'Internship' ? ' intern' : ''}`);
-    const res = await fetch(`https://api.adzuna.com/v1/api/jobs/in/search/1?app_id=${appId}&app_key=${apiKey}&results_per_page=50&what=${what}&content-type=application/json`);
+    const res = await fetch(`https://api.adzuna.com/v1/api/jobs/in/search/1?app_id=${appId}&app_key=${apiKey}&results_per_page=50&what=${what}&content-type=application/json`, { signal: AbortSignal.timeout(8000) });
     if (!res.ok) throw new Error(`Adzuna HTTP ${res.status}`);
     const data = await res.json();
     return (data.results || []).map(j => jobShape({
@@ -492,7 +492,7 @@ async function fetchJSearch({ field, jobType }) {
     const query = encodeURIComponent(`${field === 'Any' ? 'software engineer' : field}${jobType === 'Internship' ? ' intern' : ''}`);
     const res = await fetch(
         `https://jsearch.p.rapidapi.com/search?query=${query}&page=1&num_pages=3`,
-        { headers: { 'x-rapidapi-host': 'jsearch.p.rapidapi.com', 'x-rapidapi-key': key, 'User-Agent': UA } }
+        { headers: { 'x-rapidapi-host': 'jsearch.p.rapidapi.com', 'x-rapidapi-key': key, 'User-Agent': UA }, signal: AbortSignal.timeout(8000) }
     );
     if (!res.ok) throw new Error(`JSearch HTTP ${res.status}`);
     const data = await res.json();
