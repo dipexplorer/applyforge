@@ -46,3 +46,9 @@ data/resume.pdf
 # Agent directories
 .agent/
 .agents/
+
+# Test / scratch files
+test_*.py
+test_*.js
+*.test.py
+artifacts/
